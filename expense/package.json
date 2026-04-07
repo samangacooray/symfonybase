@@ -1,0 +1,21 @@
+{
+  "name": "expense",
+  "version": "1.0.0",
+  "description": "Expense Project.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "basic",
+    "npm"
+  ],
+  "author": "Sam Cooray",
+  "license": "NA",
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+  }
+}

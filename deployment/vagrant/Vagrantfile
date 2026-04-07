@@ -1,0 +1,121 @@
+# ---------------------------------------
+# VAGRANT = 2.4.9
+# PARALELLS = 26.1
+# VAGRANT BOX = bento/ubuntu-22.04
+# ---------------------------------------
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require 'yaml'
+require File.expand_path(File.dirname(__FILE__) + '/scripts/mainBase.rb')
+require File.expand_path(File.dirname(__FILE__) + '/scripts/localBase.rb')
+
+Vagrant.require_version ">=2.4.9"
+
+hostConfigPath  = File.expand_path(File.dirname(__FILE__))
+guestConfigPath = "/vagrant"
+ownerUser       = "vagrant"
+defaultsFile    = "defaults.conf"
+settingsFile    = "settings.conf"
+scriptsPath     = "scripts"           # Helper bash scripts for this file.
+deployFilesPath = "deploy-files"  # Various files deployed to the guest.
+hostPaths       = MainBase.new("~", hostConfigPath, defaultsFile, settingsFile, scriptsPath, deployFilesPath)
+
+# Get default settings from host and merge user settings, then set any defaults.
+if File.exist? hostPaths.defaults then
+  settings = YAML.load_file(hostPaths.defaults)
+  if File.exist? hostPaths.settings then
+      override = YAML.load_file(hostPaths.settings)
+      settings = settings.merge!(override);
+  end
+else
+  abort "Settings file not found in #{hostPaths.defaults}"
+end
+
+Vagrant.configure("2") do |config|
+
+  config.vm.define settings['env_name']
+  config.vm.box = settings['box']['name']
+  config.vm.box_version = settings['box']['box_version']
+
+  config.vm.provider "parallels" do |prl,override|
+    prl.name   = settings['box']['base']
+    prl.memory = 4096
+    prl.cpus   = 2
+    prl.linked_clone = false
+  end
+
+  if !settings.include? "mysql_server" then
+    settings['mysql_server'] = Hash.new();
+    settings['mysql_server']['username'] = "awsmysql"
+    settings['mysql_server']['password'] = "''"
+  end
+
+	if settings['box'].include? 'url'  then
+		config.vm.box_url = settings['box']['url']
+	end
+
+  if !settings.include? "host_os" then
+
+    host = RbConfig::CONFIG['host_os']
+    if host =~ /linux/ then
+        settings["host_os"] = 'linux'
+    elsif host =~ /darwin/ then
+        settings["host_os"] = 'osx'
+    else
+        settings["host_os"] = 'osx'
+    end
+  end
+
+  if !settings.include? "username" then
+    settings["username"] = `id -un`.strip
+  end
+
+  if !settings.include? "usergid" then
+    settings["usergid"] = `id -g`.strip
+  end
+
+  if !settings.include? "useruid" then
+    settings["useruid"] = `id -u`.strip
+  end
+	
+  config.vm.box_check_update = settings['box']['check_update']
+  config.ssh.forward_agent = settings['network']['forward_agent']
+  config.vm.hostname = settings['hostname']
+
+  config.trigger.after [:destroy, :halt] do |trigger|
+    trigger.info = "clean the exports file /etc/exports"
+    trigger.run = {inline: "bash -c 'sudo rm -rf /etc/exports; sudo touch /etc/exports'"}
+  end
+
+  config.nfs.map_uid = Process.uid #map all read requests
+  config.nfs.map_gid = Process.gid #map write requests
+  config.vm.network "private_network", ip: settings['ip_addresses']['app']['expense'], netmask: "255.255.255.0" # NOTICE - Pls use 192.168.51-56.2-21. bcos vagrant is adding a static IP as well, so cant use xx.xx.xx.1
+  config.vm.network "private_network", ip: settings['ip_addresses']['services'] , netmask: "255.255.255.0" #NOTICE - Pls use 192.168.51-56.2-21. bcos vagrant is adding a static IP as well, so cant use xx.xx.xx.1
+
+  config.vm.synced_folder "../../../symfonybase", "/var/www/html/slayd/current",
+    id: "slayd",
+    owner:ownerUser,
+    group:ownerUser
+
+  guestPaths = MainBase.new("/home/" + settings["username"], guestConfigPath, defaultsFile, settingsFile, scriptsPath, deployFilesPath)
+  base = LocalBase.new(hostPaths, guestPaths, config, settings)
+	base.configure();
+
+  config.vm.provision "shell" do |s|
+    s.name = "provision"
+    s.privileged = false
+    s.path =  "provision.sh"
+    s.args = settings['host_os'],
+      settings['env_name'],
+      settings['domain_name'],
+      settings['hostname'],
+      settings['ip_addresses']['app']['expense'], 
+      settings['ip_addresses']['services'],
+      settings['username'], 
+      guestPaths.deployFiles,
+      Process.uid, 
+      Process.gid
+  end
+
+end

@@ -1,0 +1,17 @@
+{
+  "name": "sam-local-cloud-base",
+  "description": "",
+  "versions": [
+    {
+      "version": "v1.0",
+      "providers": [
+      {
+        "name": "virtualbox",
+        "url": "s3://samanga-development/vagrant/sam-local-cloud-base",
+        "checksum_type": "sha1",
+        "checksum": "0eea80256b974ee9142f33b27afad0d7"
+      }
+      ]
+    }
+  ]
+}

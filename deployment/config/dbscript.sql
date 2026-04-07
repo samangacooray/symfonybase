@@ -1,0 +1,6 @@
+DROP USER IF EXISTS `awsmysql`;
+FLUSH PRIVILEGES;
+CREATE USER 'awsmysql'@'%' IDENTIFIED BY 'Ado2023';
+FLUSH PRIVILEGES;
+GRANT ALL ON *.* TO 'awsmysql'@'%' WITH grant option;
+CREATE DATABASE samanga;

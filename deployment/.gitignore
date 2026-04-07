@@ -1,0 +1,4 @@
+
+###> symfony/framework-bundle ###
+/vagrant/.vagrant/
+###< symfony/framework-bundle ###
