@@ -86,7 +86,7 @@ Vagrant.configure("2") do |config|
   config.trigger.after [:destroy, :halt] do |trigger|
     trigger.info = "clean the exports file /etc/exports"
     trigger.run = {inline: "bash -c 'sudo rm -rf /etc/exports; sudo touch /etc/exports'"}
-  end
+  end 
 
   config.nfs.map_uid = Process.uid #map all read requests
   config.nfs.map_gid = Process.gid #map write requests
