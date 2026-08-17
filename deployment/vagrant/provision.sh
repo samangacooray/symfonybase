@@ -13,70 +13,52 @@ GUEST_GID=$10
 
 sudo ${DEPLOY_FILES}/group.sh
 sudo ${DEPLOY_FILES}/host.sh local ${DOMAIN_NAME} ${SERVICES_IP} ${APP_IP_EXPENSE}
-sudo apt update && apt upgrade
+sudo apt update && sudo apt upgrade -y
 
-# install apache2
+# Install Apache
 sudo apt-get install -y apache2
 
-# install nginx
-# sudo apt-get install -y nginx
-
-# install php modules
-sudo add-apt-repository ppa:ondrej/php # Press enter when prompted.
+# Install PHP (latest from ondrej/php)
+sudo add-apt-repository -y ppa:ondrej/php
 sudo apt update
-sudo apt-get install -y php8.2
-sudo apt-get install -y php8.2-cli
-sudo apt-get install -y php8.2-bz2
-sudo apt-get install -y php8.2-curl
-sudo apt-get install -y php8.2-mbstring
-sudo apt-get install -y php8.2-intl
-sudo apt-get install -y php8.2-fpm
-sudo apt-get install -y php8.2-xml
-sudo apt-get install -y zip
-sudo apt-get install -y unzip
-sudo apt-get install -y php8.2-zip 
-sudo apt-get install -y php8.2-mysql 
+PHP_VER=$(apt-cache search --names-only '^php[0-9]+\.[0-9]+-cli$' | awk -F'-' '{print $1}' | sort -V | tail -1 | sed 's/php//')
+sudo apt-get install -y php${PHP_VER} php${PHP_VER}-cli php${PHP_VER}-bz2 php${PHP_VER}-curl \
+  php${PHP_VER}-mbstring php${PHP_VER}-intl php${PHP_VER}-fpm php${PHP_VER}-xml \
+  php${PHP_VER}-zip php${PHP_VER}-mysql zip unzip
 
-sudo apt-get install php-xdebug
-# echo "zend_extension=xdebug.so" | sudo tee -a /etc/php/8.2/cli/php.ini
-# echo "xdebug.mode=debug" | sudo tee -a /etc/php/8.2/cli/php.ini
-# echo "xdebug.client_host=192.168.30.4" | sudo tee -a /etc/php/8.2/cli/php.ini
-# echo "xdebug.client_port=9003" | sudo tee -a /etc/php/8.2/cli/php.ini
-# echo "xdebug.connect_timeout_ms=1" | sudo tee -a /etc/php/8.2/cli/php.ini
-# echo "xdebug.start_with_request=yes" | sudo tee -a /etc/php/8.2/cli/php.ini
-# echo "xdebug.discover_client_host=1" | sudo tee -a /etc/php/8.2/cli/php.ini
-# echo "xdebug.max_stack_frames=5" | sudo tee -a /etc/php/8.2/cli/php.ini
-# echo "xdebug.log_level=0" | sudo tee -a /etc/php/8.2/cli/php.ini
+sudo apt-get install -y php-xdebug
 
-sudo systemctl restart apache2 
-sudo apt-get install curl
-sudo apt-get install php php-curl
-sudo apt install nodejs -y
-sudo apt install npm -y yes ''
-sudo apt install awscli -y
+# Install Node.js LTS via NodeSource
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
 
+# Install Angular CLI globally
+sudo npm install -g @angular/cli@19
+
+sudo apt-get install -y curl awscli
+
+# Configure and restart Apache
 sudo ${DEPLOY_FILES}/expenses-apache.sh ${HOST_OS} ${USERNAME} ${DEPLOY_FILES} ${APP_IP_EXPENSE} ${DOMAIN_NAME}
 
+# Install Composer
 sudo curl -sS https://getcomposer.org/installer -o composer-setup.php
 php composer-setup.php
 sudo mv composer.phar /usr/local/bin/composer
 
+# Symfony API setup
 git config --global --add safe.directory /var/www/html/slayd/current
 cd /var/www/html/slayd/current/expense
-composer update
-composer i
-npm init
-npm i
+composer install
+
+sudo chmod -R 777 /var/www/html/slayd/current/expense/var/
+sudo chown -R ${USERNAME}:${USERNAME} /var/www/html/slayd/current/expense/var/
+php bin/console cache:clear
+
+# Angular SPA setup
+cd /var/www/html/slayd/current/expense-spa
+npm install
+npm run build:prod
 
 sudo a2enmod rewrite
-sudo usermod -a -G www-data vagrant
-# sudo chown -R vagrant:vagrant /var/www/html/slayd/current/expense
-sudo chmod -R 777 /var/www/html/slayd/current/expense/var/
-sudo chown -R www-data:www-data /var/www/html/slayd/current/expense/var/
+sudo usermod -a -G www-data ${USERNAME}
 sudo systemctl restart apache2
-php bin/console cache:clear
-php bin/console asset-map:compile
-sudo rm -rf /var/www/html/slayd/current/expense/var/cache/
-php bin/console cache:clear
-php bin/console tailwind:init
-php bin/console tailwind:build

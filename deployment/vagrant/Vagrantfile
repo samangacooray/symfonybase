@@ -93,7 +93,7 @@ Vagrant.configure("2") do |config|
   config.vm.network "private_network", ip: settings['ip_addresses']['app']['expense'], netmask: "255.255.255.0" # NOTICE - Pls use 192.168.51-56.2-21. bcos vagrant is adding a static IP as well, so cant use xx.xx.xx.1
   config.vm.network "private_network", ip: settings['ip_addresses']['services'] , netmask: "255.255.255.0" #NOTICE - Pls use 192.168.51-56.2-21. bcos vagrant is adding a static IP as well, so cant use xx.xx.xx.1
 
-  config.vm.synced_folder "../../../symfonybase", "/var/www/html/slayd/current",
+  config.vm.synced_folder "../../../symfonyangularbase", "/var/www/html/slayd/current",
     id: "slayd",
     owner:ownerUser,
     group:ownerUser
